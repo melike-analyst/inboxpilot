@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>InboxPilot Dashboard</title>
+<style>
+  :root { --bg:#f6f7f9; --card:#fff; --text:#1c2430; --muted:#6b7686; --line:#e3e7ee; --accent:#2f6fed; }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#12161c; --card:#1b212b; --text:#e8ecf2; --muted:#98a3b3; --line:#2a3240; --accent:#6b9cff; }
+  }
+  * { box-sizing:border-box; }
+  body { margin:0; font:15px/1.5 system-ui,sans-serif; background:var(--bg); color:var(--text); }
+  main { max-width:1000px; margin:0 auto; padding:20px 16px 60px; }
+  h1 { font-size:22px; margin:0 0 4px; } .sub { color:var(--muted); margin:0 0 20px; }
+  .cards { display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:12px; margin-bottom:20px; }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:10px; padding:14px; }
+  .card b { display:block; font-size:26px; } .card span { color:var(--muted); font-size:13px; }
+  form { display:grid; gap:8px; margin-bottom:20px; }
+  textarea,input,select,button { font:inherit; padding:9px 10px; border-radius:8px; border:1px solid var(--line); background:var(--card); color:var(--text); }
+  button { background:var(--accent); color:#fff; border:0; cursor:pointer; } button:disabled { opacity:.6; }
+  .row { display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-bottom:10px; }
+  .table-wrap { overflow-x:auto; }
+  table { width:100%; border-collapse:collapse; background:var(--card); border:1px solid var(--line); border-radius:10px; }
+  th,td { text-align:left; padding:9px 10px; border-bottom:1px solid var(--line); vertical-align:top; }
+  th { color:var(--muted); font-weight:600; font-size:13px; }
+  .tag { padding:2px 8px; border-radius:99px; font-size:12px; font-weight:600; }
+  .urgent{background:#ffdede;color:#a31515} .high{background:#ffe8cc;color:#9a4a00}
+  .medium{background:#fff3bf;color:#7a5b00} .low{background:#dff5e3;color:#1d6b32}
+  details summary { cursor:pointer; color:var(--accent); } pre { white-space:pre-wrap; margin:6px 0 0; font:inherit; color:var(--muted); }
+  #result { margin-top:8px; color:var(--muted); }
+</style>
+</head>
+<body>
+<main>
+  <h1>InboxPilot</h1>
+  <p class="sub">AI-assisted triage for incoming messages</p>
+
+  <div class="cards" id="cards"></div>
+
+  <form id="form">
+    <textarea id="message" rows="3" placeholder="Type a test message, e.g. I was charged twice, please refund" required></textarea>
+    <div class="row">
+      <input id="sender" placeholder="sender (optional)">
+      <button id="send">Triage message</button>
+    </div>
+    <div id="result"></div>
+  </form>
+
+  <div class="row">
+    <label for="filter">Priority:</label>
+    <select id="filter">
+      <option value="">all</option><option>urgent</option><option>high</option><option>medium</option><option>low</option>
+    </select>
+  </div>
+
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>#</th><th>Priority</th><th>Category</th><th>Summary</th><th>Reply draft</th></tr></thead>
+      <tbody id="rows"></tbody>
+    </table>
+  </div>
+</main>
+
+<script>
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+
+async function loadStats() {
+  const s = await (await fetch("/stats")).json();
+  const hot = (s.by_priority.urgent || 0) + (s.by_priority.high || 0);
+  const neg = s.by_sentiment.negative || 0;
+  document.getElementById("cards").innerHTML = [
+    ["Total", s.total], ["Today", s.today], ["High / urgent", hot], ["Negative", neg]
+  ].map(([l, v]) => `<div class="card"><b>${v}</b><span>${l}</span></div>`).join("");
+}
+
+async function loadTickets() {
+  const p = document.getElementById("filter").value;
+  const t = await (await fetch("/tickets" + (p ? "?priority=" + p : ""))).json();
+  document.getElementById("rows").innerHTML = t.map(x => `
+    <tr>
+      <td>${x.id}</td>
+      <td><span class="tag ${esc(x.priority)}">${esc(x.priority)}</span></td>
+      <td>${esc(x.category)}</td>
+      <td>${esc(x.summary)}<br><small>${esc(x.sender || "")} · ${esc(x.source || "")}</small></td>
+      <td><details><summary>view</summary><pre>${esc(x.suggested_reply)}</pre></details></td>
+    </tr>`).join("") || `<tr><td colspan="5">No tickets yet.</td></tr>`;
+}
+
+document.getElementById("form").addEventListener("submit", async e => {
+  e.preventDefault();
+  const btn = document.getElementById("send"); btn.disabled = true;
+  try {
+    const r = await fetch("/triage", { method: "POST", headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({ source: "dashboard", message: message.value, sender: sender.value || null }) });
+    const d = await r.json();
+    document.getElementById("result").textContent = r.ok
+      ? `→ ${d.priority} / ${d.category} / ${d.sentiment} (via ${d.provider})` : "Error: " + JSON.stringify(d);
+    if (r.ok) message.value = "";
+  } finally { btn.disabled = false; }
+  loadStats(); loadTickets();
+});
+document.getElementById("filter").addEventListener("change", loadTickets);
+loadStats(); loadTickets(); setInterval(() => { loadStats(); loadTickets(); }, 15000);
+</script>
+</body>
+</html>

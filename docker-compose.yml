@@ -1,0 +1,37 @@
+services:
+  api:
+    build: ./api
+    container_name: inboxpilot-api
+    ports:
+      - "8000:8000"
+    environment:
+      LLM_API_KEY: ${LLM_API_KEY:-}
+      LLM_BASE_URL: ${LLM_BASE_URL:-https://api.openai.com/v1}
+      LLM_MODEL: ${LLM_MODEL:-gpt-4o-mini}
+      DB_PATH: /data/inboxpilot.db
+      KB_DIR: /kb
+    volumes:
+      - ./data:/data
+      - ./knowledge_base:/kb:ro
+    restart: unless-stopped
+
+  n8n:
+    image: n8nio/n8n:latest
+    container_name: inboxpilot-n8n
+    ports:
+      - "5678:5678"
+    environment:
+      GENERIC_TIMEZONE: ${TIMEZONE:-Europe/Istanbul}
+      TZ: ${TIMEZONE:-Europe/Istanbul}
+      N8N_BLOCK_ENV_ACCESS_IN_NODE: "false"   # lets workflows read the vars below
+      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}
+      TELEGRAM_CHAT_ID: ${TELEGRAM_CHAT_ID:-}
+    volumes:
+      - n8n_data:/home/node/.n8n
+      - ./n8n/workflows:/workflows:ro
+    depends_on:
+      - api
+    restart: unless-stopped
+
+volumes:
+  n8n_data:
