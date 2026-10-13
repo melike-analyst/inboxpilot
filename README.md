@@ -17,6 +17,13 @@ Incoming messages (website form, email, Telegram, any webhook) are classified by
                               Web dashboard (http://localhost:8000)
 ```
 
+## Live demo
+
+- **Static demo (always on):** `https://YOUR-USERNAME.github.io/inboxpilot/`: the real dashboard with a simulated in-browser backend.
+- **Workflow diagram / video:** see below and [DEMO.md](DEMO.md) for how to host or record your own demo for free.
+
+![n8n workflow](docs/images/n8n-workflow.png)
+
 ## Features
 
 - **AI agent service (FastAPI):** structured triage with an LLM through any OpenAI-compatible API (OpenAI, Groq, OpenRouter, Ollama, LM Studio).
@@ -25,7 +32,7 @@ Incoming messages (website form, email, Telegram, any webhook) are classified by
 - **n8n orchestration:** webhook intake, branching on priority, Telegram alerts (mobile push), and a scheduled daily digest.
 - **Web dashboard:** live stats, ticket table with priority filter, reply drafts, and a form to test messages. It is responsive, so it works on phones.
 - **Persistence:** SQLite, with no extra database to install.
-- **Tested:** pytest suite and a GitHub Actions workflow.
+- **Tested:** pytest suite, a GitHub Actions workflow, and the n8n workflow verified end to end on n8n 2.35.
 - **Prompt-injection aware:** customer text is passed as data, and LLM output is validated against allowed values.
 
 ## Tech stack
@@ -132,8 +139,10 @@ inboxpilot/
 │   └── requirements.txt
 ├── n8n/workflows/inboxpilot.json
 ├── knowledge_base/        # your policies and FAQs (markdown)
+├── docs/                  # static demo (GitHub Pages) + workflow diagram
 ├── scripts/send_samples.py
-├── docker-compose.yml
+├── docker-compose.yml     # local stack: API + n8n
+├── Dockerfile             # single-container build for cloud hosts
 └── .env.example
 ```
 
@@ -161,6 +170,7 @@ python -m pytest -q
 
 ## Roadmap
 
+- [x] Static demo for GitHub Pages
 - [ ] API key authentication
 - [ ] Human approval step before sending replies
 - [ ] Vector search with embeddings
