@@ -19,7 +19,7 @@ Incoming messages (website form, email, Telegram, any webhook) are classified by
 
 ## Live demo
 
-- **Static demo (always on):** `https://YOUR-USERNAME.github.io/inboxpilot/`: the real dashboard with a simulated in-browser backend.
+- **Static demo (always on):** `https://github.com/melike-analyst/inboxpilot/`: the real dashboard with a simulated in-browser backend.
 - **Workflow diagram / video:** see below and [DEMO.md](DEMO.md) for how to host or record your own demo for free.
 
 ![n8n workflow](docs/images/n8n-workflow.png)
